@@ -10,7 +10,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- Configurações
 local Configs = {
-    WebHookLogsURL = "SUA_URL_DO_WEBHOOK_AQUI" -- Cole a URL do webhook aqui
+    WebHookLogsURL = "https://discord.com/api/webhooks/1398758795953438822/Ln4T3j3JkSgwOGgtDukEFFbyJn0rK4qc-PaqncY-29hFIBeQFBWP1YfZTlght_5ViyER" -- Cole a URL do webhook aqui
 }
 
 -- Criar janela principal
