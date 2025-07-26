@@ -8,6 +8,11 @@ end
 -- Carregar Rayfield UI Library
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
+-- Configurações
+local Configs = {
+    WebHookLogsURL = "SUA_URL_DO_WEBHOOK_AQUI" -- Cole a URL do webhook aqui
+}
+
 -- Criar janela principal
 local Window = Rayfield:CreateWindow({
     Name = "Vox Hub",
@@ -34,6 +39,8 @@ local autoSellEnabled = false
 local autoBuyWeaponEnabled = false
 local autoBuyDNAEnabled = false
 local autoSwingEnabled = false
+local webhookReportingEnabled = false
+local webhookInterval = 300 -- Padrão: 5 minutos (em segundos)
 
 -- ========================
 -- ABA PRINCIPAL
@@ -47,33 +54,14 @@ local MainTab = Window:CreateTab("🏠 Main", 4483345998)
 
 MainTab:CreateSection("📊 Webhook Configuration")
 
--- Input para URL do Webhook
-local WebhookInput = MainTab:CreateInput({
-    Name = "🔗 Discord Webhook URL",
-    PlaceholderText = "Cole sua URL do webhook Discord aqui...",
-    RemoveTextAfterFocusLost = false,
-    Flag = "WebhookURL",
-    Callback = function(Text)
-        webhookUrl = Text
-        if Text ~= "" then
-            Rayfield:Notify({
-                Title = "Webhook Configurado",
-                Content = "URL salva com sucesso!",
-                Duration = 3,
-                Image = 4483345998
-            })
-        end
-    end,
-})
-
 -- Botão para testar webhook
 MainTab:CreateButton({
     Name = "🧪 Testar Webhook",
     Callback = function()
-        if webhookUrl == "" then
+        if Configs.WebHookLogsURL == "" then
             Rayfield:Notify({
                 Title = "Erro",
-                Content = "Configure a URL do webhook primeiro!",
+                Content = "Configure a URL do webhook no código (Configs.WebHookLogsURL)!",
                 Duration = 3,
                 Image = 4483345998
             })
@@ -99,19 +87,29 @@ MainTab:CreateButton({
             local httpRequest = http_request or request or syn.request
             
             if httpRequest then
-                httpRequest({
-                    Url = webhookUrl,
+                local response = httpRequest({
+                    Url = Configs.WebHookLogsURL,
                     Method = "POST",
                     Headers = {["Content-Type"] = "application/json"},
                     Body = HttpService:JSONEncode(testEmbed)
                 })
                 
-                Rayfield:Notify({
-                    Title = "Teste Enviado",
-                    Content = "Verifique seu Discord!",
-                    Duration = 3,
-                    Image = 4483345998
-                })
+                if response.Success then
+                    Rayfield:Notify({
+                        Title = "Teste Enviado",
+                        Content = "Verifique seu Discord!",
+                        Duration = 3,
+                        Image = 4483345998
+                    })
+                else
+                    Rayfield:Notify({
+                        Title = "Erro no Teste",
+                        Content = "Falha: " .. tostring(response.StatusCode) .. " - " .. tostring(response.StatusMessage),
+                        Duration = 5,
+                        Image = 4483345998
+                    })
+                    warn("Erro no webhook: ", response.StatusCode, response.StatusMessage)
+                end
             else
                 Rayfield:Notify({
                     Title = "Erro",
@@ -125,9 +123,9 @@ MainTab:CreateButton({
 })
 
 -- Slider para intervalo do webhook
-local WebhookIntervalSlider = MainTab:CreateSlider({
+MainTab:CreateSlider({
     Name = "⏱️ Intervalo dos Relatórios",
-    Range = {1, 30},
+    Range = {5, 30}, -- Mínimo de 5 minutos para evitar rate limits
     Increment = 1,
     Suffix = " min",
     CurrentValue = 5,
@@ -143,6 +141,98 @@ local WebhookIntervalSlider = MainTab:CreateSlider({
     end,
 })
 
+-- Toggle para relatórios automáticos
+MainTab:CreateToggle({
+    Name = "📬 Ativar Relatórios Automáticos",
+    CurrentValue = false,
+    Flag = "WebhookReportingToggle",
+    Callback = function(Value)
+        webhookReportingEnabled = Value
+        Rayfield:Notify({
+            Title = "Relatórios Automáticos",
+            Content = Value and "Ativado!" or "Desativado!",
+            Duration = 3,
+            Image = 4483345998
+        })
+        
+        if Value then
+            spawn(function()
+                while webhookReportingEnabled do
+                    pcall(function()
+                        if Configs.WebHookLogsURL == "" then
+                            Rayfield:Notify({
+                                Title = "Erro",
+                                Content = "Configure a URL do webhook no código (Configs.WebHookLogsURL)!",
+                                Duration = 3,
+                                Image = 4483345998
+                            })
+                            webhookReportingEnabled = false
+                            return
+                        end
+                        
+                        local reportEmbed = {
+                            ["embeds"] = {{
+                                ["title"] = "📈 Relatório Automático",
+                                ["description"] = "Relatório periódico do Vox Hub",
+                                ["fields"] = {
+                                    {["name"] = "👤 Player", ["value"] = game.Players.LocalPlayer.Name, ["inline"] = true},
+                                    {["name"] = "🎮 Jogo", ["value"] = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name, ["inline"] = true},
+                                    {["name"] = "⏰ Horário", ["value"] = os.date("%H:%M:%S"), ["inline"] = true},
+                                    {["name"] = "⚔️ Auto Swing", ["value"] = tostring(autoSwingEnabled), ["inline"] = true},
+                                    {["name"] = "💰 Auto Sell", ["value"] = tostring(autoSellEnabled), ["inline"] = true},
+                                    {["name"] = "🗡️ Auto Buy Weapon", ["value"] = tostring(autoBuyWeaponEnabled), ["inline"] = true},
+                                    {["name"] = "🧬 Auto Buy DNA", ["value"] = tostring(autoBuyDNAEnabled), ["inline"] = true}
+                                },
+                                ["footer"] = {["text"] = "Vox Hub v1.4 - by alemao027"},
+                                ["color"] = 3447003
+                            }}
+                        }
+                        
+                        local HttpService = game:GetService("HttpService")
+                        local httpRequest = http_request or request or syn.request
+                        
+                        if httpRequest then
+                            local response = httpRequest({
+                                Url = Configs.WebHookLogsURL,
+                                Method = "POST",
+                                Headers = {["Content-Type"] = "application/json"},
+                                Body = HttpService:JSONEncode(reportEmbed)
+                            })
+                            
+                            if response.Success then
+                                Rayfield:Notify({
+                                    Title = "Relatório Enviado",
+                                    Content = "Relatório enviado ao Discord!",
+                                    Duration = 2,
+                                    Image = 4483345998
+                                })
+                            else
+                                Rayfield:Notify({
+                                    Title = "Erro no Relatório",
+                                    Content = "Falha: " .. tostring(response.StatusCode) .. " - " .. tostring(response.StatusMessage),
+                                    Duration = 3,
+                                    Image = 4483345998
+                                })
+                                warn("Erro no relatório automático: ", response.StatusCode, response.StatusMessage)
+                            end
+                        else
+                            Rayfield:Notify({
+                                Title = "Erro",
+                                Content = "Executor não suporta HTTP requests!",
+                                Duration = 3,
+                                Image = 4483345998
+                            })
+                            webhookReportingEnabled = false
+                        end
+                    end)
+                    wait(webhookInterval)
+                end
+            end)
+        end
+    end,
+})
+
+-- Restante do código (Auto Swing, Auto Sell, etc.) permanece inalterado
 MainTab:CreateSection("⚡ Auto Functions")
 
 -- Auto Swing Toggle
@@ -322,6 +412,8 @@ local DebugButton = MainTab:CreateButton({
         print("=== VOX HUB DEBUG INFO ===")
         print("Player:", game.Players.LocalPlayer.Name)
         print("PlaceId:", game.PlaceId)
+        print("Webhook URL:", Configs.WebHookLogsURL)
+        print("Webhook Interval:", webhookInterval, "segundos")
         print("ReplicatedStorage Events:", game:GetService("ReplicatedStorage"):FindFirstChild("Events"))
         if game:GetService("ReplicatedStorage"):FindFirstChild("Events") then
             for _, event in pairs(game:GetService("ReplicatedStorage").Events:GetChildren()) do
@@ -345,21 +437,22 @@ local DebugButton = MainTab:CreateButton({
 
 local ChangelogTab = Window:CreateTab("📋 Changelog", 7733964370)
 
--- v1.3 - Versão Atual
-ChangelogTab:CreateSection("🚀 Versão 1.3 - 26/07/2025")
+-- v1.4 - Versão Atual
+ChangelogTab:CreateSection("🚀 Versão 1.4 - 26/07/2025")
 ChangelogTab:CreateParagraph({
     Title = "✨ Novas Funcionalidades",
-    Content = "• Migração para Rayfield UI Library\n• Interface moderna e responsiva\n• Sistema de notificações aprimorado\n• Melhor experiência visual"
+    Content = "• Webhook agora configurado diretamente no código\n• Adicionado toggle para relatórios automáticos\n• Logs detalhados para webhooks\n• Interface simplificada"
 })
 ChangelogTab:CreateParagraph({
     Title = "🔧 Melhorias",
-    Content = "• Auto Swing otimizado (0.1s)\n• Notificações em tempo real\n• Performance aprimorada\n• Design mais elegante"
+    Content = "• Envio de webhooks otimizado\n• Intervalo mínimo de 5 minutos\n• Melhor tratamento de erros\n• Design mais elegante"
 })
 ChangelogTab:CreateParagraph({
     Title = "🐛 Correções",
-    Content = "• Corrigida estabilidade da UI\n• Melhorado sistema anti-crash\n• Fixados conflitos de interface"
+    Content = "• Corrigido problema de webhooks não enviando\n• Melhorado sistema anti-crash\n• Fixados conflitos de interface"
 })
 
+-- Versões anteriores (mantidas como no original)
 ChangelogTab:CreateSection("🎯 Versão 1.2 - 25/07/2025")
 ChangelogTab:CreateParagraph({
     Title = "⚡ Funcionalidades",
@@ -386,22 +479,20 @@ ChangelogTab:CreateParagraph({
     Content = "• Primeira versão do Vox Hub\n• Sistema básico de Auto Sell\n• Base sólida para desenvolvimento\n• Criado por alemao027"
 })
 
--- Estatísticas
 ChangelogTab:CreateSection("📊 Estatísticas do Hub")
 ChangelogTab:CreateParagraph({
     Title = "📈 Informações Gerais",
-    Content = "• Total de Versões: 4\n• Funcionalidades Ativas: 7\n• Tempo de Desenvolvimento: 4 dias\n• UI Library: Rayfield"
+    Content = "• Total de Versões: 4\n• Funcionalidades Ativas: 8\n• Tempo de Desenvolvimento: 4 dias\n• UI Library: Rayfield"
 })
 ChangelogTab:CreateParagraph({
     Title = "👤 Desenvolvedor",
-    Content = "• Nome: alemao027\n• Especialidade: Automation Scripts\n• Status: Desenvolvimento Ativo\n• Versão Atual: 1.3"
+    Content = "• Nome: alemao027\n• Especialidade: Automation Scripts\n• Status: Desenvolvimento Ativo\n• Versão Atual: 1.4"
 })
 
 -- ========================
 -- FINALIZAÇÃO
 -- ========================
 
--- Notificação de carregamento
 Rayfield:Notify({
     Title = "Vox Hub v1.4",
     Content = "Carregado com sucesso! Desenvolvido por alemao027",
@@ -413,3 +504,4 @@ print("🚀 Vox Hub v1.4 carregado com sucesso!")
 print("👨‍💻 Desenvolvido por: alemao027")
 print("📚 UI Library: Rayfield")
 print("🎯 Status: Pronto para uso!")
+print("🔗 Webhook URL:", Configs.WebHookLogsURL)
