@@ -42,6 +42,33 @@ local autoSwingEnabled = false
 local webhookReportingEnabled = false
 local webhookInterval = 300 -- Padrão: 5 minutos (em segundos)
 
+-- Função para obter estatísticas do jogador (ajuste conforme o jogo)
+local function getPlayerStats()
+    local player = game.Players.LocalPlayer
+    local stats = {
+        Coins = "N/A",
+        Crowns = "N/A",
+        Diamonds = "N/A",
+        Elements = "N/A",
+        EventCoins = "N/A",
+        Strength = "N/A"
+    }
+    
+    pcall(function()
+        local leaderstats = player:FindFirstChild("leaderstats")
+        if leaderstats then
+            stats.Coins = leaderstats:FindFirstChild("Coins") and tostring(leaderstats.Coins.Value) or "N/A"
+            stats.Crowns = leaderstats:FindFirstChild("Crowns") and tostring(leaderstats.Crowns.Value) or "N/A"
+            stats.Diamonds = leaderstats:FindFirstChild("Diamonds") and tostring(leaderstats.Diamonds.Value) or "N/A"
+            stats.Elements = leaderstats:FindFirstChild("Elements") and tostring(leaderstats.Elements.Value) or "N/A"
+            stats.EventCoins = leaderstats:FindFirstChild("EventCoins") and tostring(leaderstats.EventCoins.Value) or "N/A"
+            stats.Strength = leaderstats:FindFirstChild("Strength") and tostring(leaderstats.Strength.Value) or "N/A"
+        end
+    end)
+    
+    return stats
+end
+
 -- ========================
 -- ABA PRINCIPAL
 -- ========================
@@ -143,13 +170,13 @@ MainTab:CreateSlider({
 
 -- Toggle para relatórios automáticos
 MainTab:CreateToggle({
-    Name = "📬 Ativar Relatórios Automáticos",
+    Name = "📊 Auto Webhook Stats",
     CurrentValue = false,
     Flag = "WebhookReportingToggle",
     Callback = function(Value)
         webhookReportingEnabled = Value
         Rayfield:Notify({
-            Title = "Relatórios Automáticos",
+            Title = "Auto Webhook Stats",
             Content = Value and "Ativado!" or "Desativado!",
             Duration = 3,
             Image = 4483345998
@@ -170,6 +197,7 @@ MainTab:CreateToggle({
                             return
                         end
                         
+                        local stats = getPlayerStats()
                         local reportEmbed = {
                             ["embeds"] = {{
                                 ["title"] = "📈 Relatório Automático",
@@ -178,6 +206,12 @@ MainTab:CreateToggle({
                                     {["name"] = "👤 Player", ["value"] = game.Players.LocalPlayer.Name, ["inline"] = true},
                                     {["name"] = "🎮 Jogo", ["value"] = game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name, ["inline"] = true},
                                     {["name"] = "⏰ Horário", ["value"] = os.date("%H:%M:%S"), ["inline"] = true},
+                                    {["name"] = "💰 Coins", ["value"] = stats.Coins, ["inline"] = true},
+                                    {["name"] = "👑 Crowns", ["value"] = stats.Crowns, ["inline"] = true},
+                                    {["name"] = "💎 Diamonds", ["value"] = stats.Diamonds, ["inline"] = true},
+                                    {["name"] = "🌟 Elements", ["value"] = stats.Elements, ["inline"] = true},
+                                    {["name"] = "🎟️ EventCoins", ["value"] = stats.EventCoins, ["inline"] = true},
+                                    {["name"] = "💪 Strength", ["value"] = stats.Strength, ["inline"] = true},
                                     {["name"] = "⚔️ Auto Swing", ["value"] = tostring(autoSwingEnabled), ["inline"] = true},
                                     {["name"] = "💰 Auto Sell", ["value"] = tostring(autoSellEnabled), ["inline"] = true},
                                     {["name"] = "🗡️ Auto Buy Weapon", ["value"] = tostring(autoBuyWeaponEnabled), ["inline"] = true},
@@ -232,11 +266,14 @@ MainTab:CreateToggle({
     end,
 })
 
--- Restante do código (Auto Swing, Auto Sell, etc.) permanece inalterado
+-- ========================
+-- AUTO FUNÇÕES
+-- ========================
+
 MainTab:CreateSection("⚡ Auto Functions")
 
 -- Auto Swing Toggle
-local AutoSwingToggle = MainTab:CreateToggle({
+MainTab:CreateToggle({
     Name = "⚔️ Auto Swing",
     CurrentValue = false,
     Flag = "AutoSwingToggle",
@@ -268,7 +305,7 @@ local AutoSwingToggle = MainTab:CreateToggle({
 })
 
 -- Auto Sell Toggle
-local AutoSellToggle = MainTab:CreateToggle({
+MainTab:CreateToggle({
     Name = "💰 Auto Sell",
     CurrentValue = false,
     Flag = "AutoSellToggle",
@@ -300,7 +337,7 @@ local AutoSellToggle = MainTab:CreateToggle({
 })
 
 -- Auto Buy Weapon Toggle
-local AutoBuyWeaponToggle = MainTab:CreateToggle({
+MainTab:CreateToggle({
     Name = "🗡️ Auto Buy Best Weapon",
     CurrentValue = false,
     Flag = "AutoBuyWeaponToggle",
@@ -332,7 +369,7 @@ local AutoBuyWeaponToggle = MainTab:CreateToggle({
 })
 
 -- Auto Buy DNA Toggle
-local AutoBuyDNAToggle = MainTab:CreateToggle({
+MainTab:CreateToggle({
     Name = "🧬 Auto Buy DNA",
     CurrentValue = false,
     Flag = "AutoBuyDNAToggle",
@@ -363,11 +400,14 @@ local AutoBuyDNAToggle = MainTab:CreateToggle({
     end,
 })
 
--- Seção de botões
+-- ========================
+-- UTILIDADES
+-- ========================
+
 MainTab:CreateSection("🛠️ Utilities")
 
 -- Infinite Yield Button
-local InfiniteYieldButton = MainTab:CreateButton({
+MainTab:CreateButton({
     Name = "📜 Infinite Yield",
     Callback = function()
         pcall(function()
@@ -383,7 +423,7 @@ local InfiniteYieldButton = MainTab:CreateButton({
 })
 
 -- Rejoin Button
-local RejoinButton = MainTab:CreateButton({
+MainTab:CreateButton({
     Name = "🔄 Rejoin Server",
     Callback = function()
         pcall(function()
@@ -406,14 +446,16 @@ local RejoinButton = MainTab:CreateButton({
 })
 
 -- Debug Button
-local DebugButton = MainTab:CreateButton({
+MainTab:CreateButton({
     Name = "🔍 Debug Info",
     Callback = function()
+        local stats = getPlayerStats()
         print("=== VOX HUB DEBUG INFO ===")
         print("Player:", game.Players.LocalPlayer.Name)
         print("PlaceId:", game.PlaceId)
         print("Webhook URL:", Configs.WebHookLogsURL)
         print("Webhook Interval:", webhookInterval, "segundos")
+        print("Stats:", stats)
         print("ReplicatedStorage Events:", game:GetService("ReplicatedStorage"):FindFirstChild("Events"))
         if game:GetService("ReplicatedStorage"):FindFirstChild("Events") then
             for _, event in pairs(game:GetService("ReplicatedStorage").Events:GetChildren()) do
@@ -441,18 +483,18 @@ local ChangelogTab = Window:CreateTab("📋 Changelog", 7733964370)
 ChangelogTab:CreateSection("🚀 Versão 1.4 - 26/07/2025")
 ChangelogTab:CreateParagraph({
     Title = "✨ Novas Funcionalidades",
-    Content = "• Webhook agora configurado diretamente no código\n• Adicionado toggle para relatórios automáticos\n• Logs detalhados para webhooks\n• Interface simplificada"
+    Content = "• Webhook configurado diretamente no código\n• Toggle Auto Webhook Stats com relatórios detalhados\n• Estatísticas: Coins, Crowns, Diamonds, Elements, EventCoins, Strength\n• Logs detalhados para webhooks"
 })
 ChangelogTab:CreateParagraph({
     Title = "🔧 Melhorias",
-    Content = "• Envio de webhooks otimizado\n• Intervalo mínimo de 5 minutos\n• Melhor tratamento de erros\n• Design mais elegante"
+    Content = "• Envio de webhooks otimizado\n• Intervalo mínimo de 5 minutos\n• Melhor tratamento de erros\n• Interface simplificada"
 })
 ChangelogTab:CreateParagraph({
     Title = "🐛 Correções",
     Content = "• Corrigido problema de webhooks não enviando\n• Melhorado sistema anti-crash\n• Fixados conflitos de interface"
 })
 
--- Versões anteriores (mantidas como no original)
+-- Versões anteriores
 ChangelogTab:CreateSection("🎯 Versão 1.2 - 25/07/2025")
 ChangelogTab:CreateParagraph({
     Title = "⚡ Funcionalidades",
