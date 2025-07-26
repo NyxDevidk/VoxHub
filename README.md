@@ -22,7 +22,7 @@ Um hub completo e otimizado para automatizar suas ações no jogo, construído c
 
 ### Instalação
 ```lua
-loadstring(game:HttpGet('https://raw.githubusercontent.com/[SEU_REPO]/vox-hub/main/script.lua'))()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/NyxDevidk/VoxHub/refs/heads/main/main.lua'))()
 ```
 
 ### Operação
