@@ -8,15 +8,58 @@ end
 -- Carregar Rayfield UI Library
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
--- Configurações
+-- Permitir configuração via argumento do loadstring ou variável global
+local userConfig = ...
+if not userConfig and type(_G.VoxHubConfig) == "table" then
+    userConfig = _G.VoxHubConfig
+end
+
+-- Configuração padrão
 local Configs = {
-    WebHookLogsURL = "https://discord.com/api/webhooks/1398758795953438822/Ln4T3j3JkSgwOGgtDukEFFbyJn0rK4qc-PaqncY-29hFIBeQFBWP1YfZTlght_5ViyER" -- Cole a URL do webhook aqui
+    WebHookLogsURL = "https://discord.com/api/webhooks/1398758795953438822/Ln4T3j3JkSgwOGgtDukEFFbyJn0rK4qc-PaqncY-29hFIBeQFBWP1YfZTlght_5ViyER"
 }
+
+-- Variáveis de controle padrão
+local autoSellEnabled = false
+local autoBuyWeaponEnabled = false
+local autoBuyDNAEnabled = false
+local autoSwingEnabled = false
+local autoEquipBestPetsEnabled = false
+local webhookInterval = 300 -- segundos (5 min padrão)
+
+-- Se o usuário passou uma tabela, sobrescreva as configs
+if type(userConfig) == "table" then
+    if userConfig.WebHookLogsURL then Configs.WebHookLogsURL = userConfig.WebHookLogsURL end
+    if userConfig.AutoSell ~= nil then autoSellEnabled = userConfig.AutoSell end
+    if userConfig.AutoSwing ~= nil then autoSwingEnabled = userConfig.AutoSwing end
+    if userConfig.AutoBuyWeapon ~= nil then autoBuyWeaponEnabled = userConfig.AutoBuyWeapon end
+    if userConfig.AutoBuyDNA ~= nil then autoBuyDNAEnabled = userConfig.AutoBuyDNA end
+    if userConfig.AutoEquipBestPets ~= nil then autoEquipBestPetsEnabled = userConfig.AutoEquipBestPets end
+    if userConfig.WebhookInterval then webhookInterval = userConfig.WebhookInterval * 60 end
+end
+
+-- Detectar executor
+local executor = "Desconhecido"
+if identifyexecutor then
+    executor = identifyexecutor()
+elseif syn and syn.protect_gui then
+    executor = "Synapse X"
+elseif KRNL_LOADED then
+    executor = "KRNL"
+elseif isexecutorclosure then
+    executor = "Script-Ware"
+elseif getexecutorname then
+    executor = getexecutorname()
+elseif fluxus then
+    executor = "Fluxus"
+elseif is_delta_closure or DELTA_LOADED then
+    executor = "Delta"
+end
 
 -- Criar janela principal
 local Window = Rayfield:CreateWindow({
-    Name = "Vox Hub",
-    LoadingTitle = "Vox Hub v1.4",
+    Name = "Vox Hub [" .. executor .. "]",
+    LoadingTitle = "Vox Hub v1.4 (" .. executor .. ")",
     LoadingSubtitle = "by alemao027",
     ConfigurationSaving = {
         Enabled = true,
@@ -34,13 +77,6 @@ local Window = Rayfield:CreateWindow({
 -- ========================
 -- VARIÁVEIS DE CONTROLE
 -- ========================
-
-local autoSellEnabled = false
-local autoBuyWeaponEnabled = false
-local autoBuyDNAEnabled = false
-local autoSwingEnabled = false
-local webhookReportingEnabled = false
-local webhookInterval = 300 -- Padrão: 5 minutos (em segundos)
 
 -- Função para obter estatísticas do jogador (ajuste conforme o jogo)
 local function getPlayerStats()
@@ -276,7 +312,7 @@ MainTab:CreateSection("⚡ Auto Functions")
 -- Auto Swing Toggle
 MainTab:CreateToggle({
     Name = "⚔️ Auto Swing",
-    CurrentValue = false,
+    CurrentValue = autoSwingEnabled,
     Flag = "AutoSwingToggle",
     Callback = function(Value)
         autoSwingEnabled = Value
@@ -286,7 +322,6 @@ MainTab:CreateToggle({
             Duration = 2,
             Image = 4483345998
         })
-        
         if Value then
             spawn(function()
                 while autoSwingEnabled do
@@ -304,11 +339,26 @@ MainTab:CreateToggle({
         end
     end,
 })
+if autoSwingEnabled then
+    spawn(function()
+        while autoSwingEnabled do
+            pcall(function()
+                local swingEvent = game:GetService("ReplicatedStorage"):WaitForChild("Events", 5):WaitForChild("SwingSaber", 5)
+                if swingEvent then
+                    swingEvent:FireServer()
+                else
+                    warn("Evento SwingSaber não encontrado!")
+                end
+            end)
+            wait(0.1)
+        end
+    end)
+end
 
 -- Auto Sell Toggle
 MainTab:CreateToggle({
     Name = "💰 Auto Sell",
-    CurrentValue = false,
+    CurrentValue = autoSellEnabled,
     Flag = "AutoSellToggle",
     Callback = function(Value)
         autoSellEnabled = Value
@@ -318,7 +368,6 @@ MainTab:CreateToggle({
             Duration = 2,
             Image = 4483345998
         })
-        
         if Value then
             spawn(function()
                 while autoSellEnabled do
@@ -336,11 +385,26 @@ MainTab:CreateToggle({
         end
     end,
 })
+if autoSellEnabled then
+    spawn(function()
+        while autoSellEnabled do
+            pcall(function()
+                local sellEvent = game:GetService("ReplicatedStorage"):WaitForChild("Events", 5):WaitForChild("SellStrength", 5)
+                if sellEvent then
+                    sellEvent:FireServer()
+                else
+                    warn("Evento SellStrength não encontrado!")
+                end
+            end)
+            wait(1)
+        end
+    end)
+end
 
 -- Auto Buy Weapon Toggle
 MainTab:CreateToggle({
     Name = "🗡️ Auto Buy Best Weapon",
-    CurrentValue = false,
+    CurrentValue = autoBuyWeaponEnabled,
     Flag = "AutoBuyWeaponToggle",
     Callback = function(Value)
         autoBuyWeaponEnabled = Value
@@ -350,7 +414,6 @@ MainTab:CreateToggle({
             Duration = 2,
             Image = 4483345998
         })
-        
         if Value then
             spawn(function()
                 while autoBuyWeaponEnabled do
@@ -368,11 +431,26 @@ MainTab:CreateToggle({
         end
     end,
 })
+if autoBuyWeaponEnabled then
+    spawn(function()
+        while autoBuyWeaponEnabled do
+            pcall(function()
+                local uiEvent = game:GetService("ReplicatedStorage"):WaitForChild("Events", 5):WaitForChild("UIAction", 5)
+                if uiEvent then
+                    uiEvent:FireServer("BuyAllWeapons")
+                else
+                    warn("Evento UIAction não encontrado!")
+                end
+            end)
+            wait(2)
+        end
+    end)
+end
 
 -- Auto Buy DNA Toggle
 MainTab:CreateToggle({
     Name = "🧬 Auto Buy DNA",
-    CurrentValue = false,
+    CurrentValue = autoBuyDNAEnabled,
     Flag = "AutoBuyDNAToggle",
     Callback = function(Value)
         autoBuyDNAEnabled = Value
@@ -382,7 +460,6 @@ MainTab:CreateToggle({
             Duration = 2,
             Image = 4483345998
         })
-        
         if Value then
             spawn(function()
                 while autoBuyDNAEnabled do
@@ -400,6 +477,67 @@ MainTab:CreateToggle({
         end
     end,
 })
+if autoBuyDNAEnabled then
+    spawn(function()
+        while autoBuyDNAEnabled do
+            pcall(function()
+                local uiEvent = game:GetService("ReplicatedStorage"):WaitForChild("Events", 5):WaitForChild("UIAction", 5)
+                if uiEvent then
+                    uiEvent:FireServer("BuyAllDNAs")
+                else
+                    warn("Evento UIAction não encontrado!")
+                end
+            end)
+            wait(2)
+        end
+    end)
+end
+
+-- Auto Equip Best Pets Toggle
+MainTab:CreateToggle({
+    Name = "🐾 Auto Equip Best Pets",
+    CurrentValue = autoEquipBestPetsEnabled,
+    Flag = "AutoEquipBestPetsToggle",
+    Callback = function(Value)
+        autoEquipBestPetsEnabled = Value
+        Rayfield:Notify({
+            Title = "Auto Equip Best Pets",
+            Content = Value and "Ativado!" or "Desativado!",
+            Duration = 2,
+            Image = 4483345998
+        })
+        if Value then
+            spawn(function()
+                while autoEquipBestPetsEnabled do
+                    pcall(function()
+                        local uiEvent = game:GetService("ReplicatedStorage"):WaitForChild("Events", 5):WaitForChild("UIAction", 5)
+                        if uiEvent then
+                            uiEvent:FireServer("EquipBestPets")
+                        else
+                            warn("Evento UIAction não encontrado!")
+                        end
+                    end)
+                    wait(2)
+                end
+            end)
+        end
+    end,
+})
+if autoEquipBestPetsEnabled then
+    spawn(function()
+        while autoEquipBestPetsEnabled do
+            pcall(function()
+                local uiEvent = game:GetService("ReplicatedStorage"):WaitForChild("Events", 5):WaitForChild("UIAction", 5)
+                if uiEvent then
+                    uiEvent:FireServer("EquipBestPets")
+                else
+                    warn("Evento UIAction não encontrado!")
+                end
+            end)
+            wait(2)
+        end
+    end)
+end
 
 -- ========================
 -- UTILIDADES
