@@ -53,19 +53,20 @@ local function getPlayerStats()
         EventCoins = "N/A",
         Strength = "N/A"
     }
-    
+
     pcall(function()
-        local leaderstats = player:FindFirstChild("leaderstats")
-        if leaderstats then
-            stats.Coins = leaderstats:FindFirstChild("Coins") and tostring(leaderstats.Coins.Value) or "N/A"
-            stats.Crowns = leaderstats:FindFirstChild("Crowns") and tostring(leaderstats.Crowns.Value) or "N/A"
-            stats.Diamonds = leaderstats:FindFirstChild("Diamonds") and tostring(leaderstats.Diamonds.Value) or "N/A"
-            stats.Elements = leaderstats:FindFirstChild("Elements") and tostring(leaderstats.Elements.Value) or "N/A"
-            stats.EventCoins = leaderstats:FindFirstChild("EventCoins") and tostring(leaderstats.EventCoins.Value) or "N/A"
-            stats.Strength = leaderstats:FindFirstChild("Strength") and tostring(leaderstats.Strength.Value) or "N/A"
+        local gui = player.PlayerGui:FindFirstChild("MainGui")
+        if gui and gui:FindFirstChild("StartFrame") and gui.StartFrame:FindFirstChild("Currency") then
+            local currency = gui.StartFrame.Currency
+            stats.Coins = currency:FindFirstChild("Coins") and currency.Coins.Text or "N/A"
+            stats.Crowns = currency:FindFirstChild("Crowns") and currency.Crowns.Text or "N/A"
+            stats.Diamonds = currency:FindFirstChild("Diamonds") and currency.Diamonds.Text or "N/A"
+            stats.Elements = currency:FindFirstChild("Elements") and currency.Elements.Text or "N/A"
+            stats.EventCoins = currency:FindFirstChild("EventCoins") and currency.EventCoins.Text or "N/A"
+            stats.Strength = currency:FindFirstChild("Strength") and currency.Strength.Text or "N/A"
         end
     end)
-    
+
     return stats
 end
 
